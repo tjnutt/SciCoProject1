@@ -1,0 +1,139 @@
+clear all;
+clc;
+
+% establish our variables and parameters
+
+minX=-pi; % our rectangle of interest is from -pi to pi in the x and y directions
+minY=-pi;
+maxX=pi;
+maxY=pi;
+dt=.0025; % time step is 2.5 msec
+nt=800; % maximum time goes up to two seconds
+D=1; % diffusion equation parameter D set to 1 for ease of use
+
+x=(minX:.1256:maxX);  % here is our discretized x axis
+dx=.1256;             % this is the x step
+y=(minY:.1256:maxY);  % discretized y axis
+dy=.1256;             % y step
+
+lambda=dt/dx^2;       % lambda is a useful value used to create our coefficient matrix for the implicit method
+
+
+% here we have our fixed value distributions for the left and right sides of the
+% rectangle (dirichlet conditions)
+
+phi = ((y + pi).^2).*sin((pi*(y+pi))/(2*(2*pi)));
+psi = (cos(pi*(y + pi))).*cosh(pi - y);
+
+
+phiY=zeros(51,1);
+
+for i=1:51
+    phiY(i)= ((y(i)-pi)^2)*sin((y(i)-pi)/2);
+end
+
+psiY=zeros(51,1);
+
+for i=1:51
+    psiY(i)=cos(pi*(y(i) - pi))*cosh(pi - y(i));
+end
+
+% initial values matrix for the rectangle
+
+u=zeros(51,51);
+u(:,1)=flip(phi);
+u(:,51)=flip(psi);
+
+% Explicit method
+
+% initialize our coefficient matrix
+
+A = zeros(2601);
+
+% building our coefficient matrix
+
+for i = 1:2601
+    A(i,i)=-2*(1/dx^2 + 1/dy^2);
+end
+ 
+for i=1:50
+    for j=1:51
+        A(i+(j-1)*51, i+(j-1)*51+1) = 1/dx^2;
+        A(i+(j-1)*51+1, i+(j-1)*51) = 1/dx^2;
+    end
+end
+ for i=1:51
+     for j=1:50
+         A(i+(j-1)*51, i+j*51) = 1/dy^2;
+         A(i+j*51, i+(j-1)*51) = 1/dy^2;
+     end
+ end
+
+% solving for the given conditions using a real time growth model
+
+for it=0:nt
+    U=reshape(u,2601,1); %Using 
+    P=A*U;
+    M=reshape(P,51,51);
+    u = u + dt*M;
+    u(:,1)=flip(phi);
+    u(:,51)=flip(psi);
+    h=surf(x,y,u,'EdgeColor','none');       %plotting the field variable
+    axis ([-pi pi -pi pi -10 10])
+     title({['2-D Diffusion with {\nu} = ',num2str(v)];['time (\itt) = ',num2str(it*dt)]})
+    xlabel('Spatial co-ordinate (x) \rightarrow')
+    ylabel('{\leftarrow} Spatial co-ordinate (y)')
+    zlabel('Transport property profile (u) \rightarrow')
+    drawnow; 
+    refreshdata(h) 
+end
+
+
+
+%implicit method - remove comment bracket to activate
+
+%{ 
+
+%reinitialize our coefficient matrix for the implicit method
+
+A = zeros(2601);
+
+%building our coefficient matrix
+
+for i = 1:2601
+    A(i,i)=1+4*lambda;
+end
+ 
+for i=1:50
+    for j=1:51
+        A(i+(j-1)*51, i+(j-1)*51+1) = -lambda;
+        A(i+(j-1)*51+1, i+(j-1)*51) = -lambda;
+    end
+end
+ for i=1:51
+     for j=1:50
+         A(i+(j-1)*51, i+j*51) = -lambda;
+         A(i+j*51, i+(j-1)*51) = -lambda;
+     end
+ end
+
+%solving using a real time growth model
+
+for it=0:nt
+    U=reshape(u,2601,1);
+    P=A\U;
+    M=reshape(P,51,51);
+    u = u + dt*M;
+    u(:,1)=flip(phi);
+    u(:,51)=flip(psi);
+    g=surf(x,y,u,'EdgeColor','none');       %plotting the field variable
+    axis ([-pi pi -pi pi -2 2])
+     title({['2-D Diffusion with {\nu} = ',num2str(v)];['time (\itt) = ',num2str(it*dt)]})
+    xlabel('Spatial co-ordinate (x) \rightarrow')
+    ylabel('{\leftarrow} Spatial co-ordinate (y)')
+    zlabel('Transport property profile (u) \rightarrow')
+    drawnow; 
+    refreshdata(g) 
+end
+
+%}
